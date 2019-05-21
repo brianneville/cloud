@@ -6,7 +6,6 @@ import threading
 from server import ServerClass
 
 
-
 class ClientHandler(threading.Thread):
 
     def __init__(self, ip, port_num):
@@ -20,7 +19,6 @@ class ClientHandler(threading.Thread):
         # wait for server to be set up:
         print("sleeping to allow server to startup")
         time.sleep(0.1)
-        # self.print_newterm("msg placeholder - current dir")
         # continue now that server has been set up
         pass
 
@@ -31,49 +29,7 @@ class ClientHandler(threading.Thread):
             message = message.encode()
             s.sendall(message)
             data = s.recv(1024)
-            # self.print_newterm(f'Received {data.decode()}')
             return data.decode()
-
-    '''  
-    def print_newterm(self, msg):
-        pass
-              
-        # open a new terminal to allow the client to enter details
-        subprocess.Popen("cmd.exe", "-c","", shell=True)
-
-        if platform.system() == "Windows":
-            new_window_command = "cmd.exe /c start".split()
-        else:
-            new_window_command = "x-terminal-emulator -e".split()
-
-        filepath = 'D:/Users/Brian/PycharmProjects/dfs/testingfile.txt'
-        string = "import sys; print(sys.argv[1]); print('enter f to see files'); print('enter close to exit dfs');"\
-                " test = input('enter choice:'); sys.stdout = open('', 'w'); print(test)"
-
-        "import sys; print(sys.argv[1]); print('enter f to see files'); print('enter close to exit dfs');" \
-            " test = input('enter choice:'); sys.stdout = open('D:/Users/Brian/PycharmProjects/dfs/testingfile.txt'," \
-        " 'w'); print(test)"
-
-        echo = [sys.executable, "-c",
-                "import sys; print(sys.argv[1]); print('enter f to see files'); print('enter close to exit dfs');"
-                " test = input('enter choice:'); from os.path import expanduser; home = expanduser('~'); print(home);"
-                " sys.stdout = open('D:/Users/Brian/PycharmProjects/dfs/testingfile.txt', 'w'); print(test)"]
-
-        # echo = [sys.executable, "-c", "import sys; print(sys.argv[1]); input('enter choice:')"]
-
-        # os.system("start cmd /K dir")
-        # self.proc = None #   Popen('cmd', shell=True)
-        try:
-            self.proc.kill()
-        except AttributeError:
-            pass
-
-        self.proc = Popen(new_window_command + echo + [msg], stdout=PIPE, stdin=PIPE)
-        lin = self.proc.stdout.readline()
-        # self.proc.stdout.readline()
-        print(f'print_newterm caught test = {lin}')
-        self.proc.wait()
-    '''
 
 
 class User:

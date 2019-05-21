@@ -1,19 +1,17 @@
 # A UI for the client to use the dfs
 import sys
-from functools import partial
-
 import kivy
 import wx
-from kivy.clock import Clock
+from functools import partial
 
 kivy.require('1.10.1')
 from kivy.core.window import Window
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.properties import StringProperty, ListProperty
+from kivy.properties import StringProperty
+from kivy.clock import Clock
 
-padding = 20
 
 exit_red = 0.85, 0.15, 0.2, 1
 button_col = 0.7, 0.8, 0.8, 1
@@ -132,10 +130,6 @@ AppScreenManager:
                 halign: 'left' 
                 multiline: True
 
-
-
-
-
 """
 
 
@@ -178,19 +172,15 @@ class MainScreen(Screen):
     pass
 
 
-class TestApp(App):
-    # bus name being search, e.g. 67, bus stop number e.g 495, address of bus stop eg. Westmoreland st
-    current_index = -1
+class AppClass(App):
 
     def build(self):
-        # return sm
-        self.title = 'Bus times'
+        self.title = 'DFS'
         return Builder.load_string(gui)
 
 
-
 if __name__ == '__main__':
-    app_instance = TestApp()
+    app_instance = AppClass()
     app_instance.run()
 
 # use pyinstaller --noconsole -- onefile UI.py
