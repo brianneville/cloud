@@ -36,7 +36,7 @@ class ClientClass:
         self.PORT_NUM = port_num
         self.proc = None    # process used to print out on console
 
-    def send(self, message):
+    def send(self, message) -> str:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # 'with' statement will close connection when finished
             s.connect((self.HOST_IP, self.PORT_NUM))

@@ -235,7 +235,7 @@ class AppClass(App):
         print("putting into q")
         msg_q.put('close')
         print("closing app")
-        # time.sleep(0.5)         # TODO: is this sleep needed - probably not? remove it?
+        time.sleep(0.5)         # TODO: is this sleep needed - probably not? remove it?
         self.stop()
 
 

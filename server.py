@@ -15,9 +15,9 @@ class ServerClass(threading.Thread):
         print(f"client message is: {message}\n client address is: {addr}")
 
         print(f"Server echoing: {message}")  # echo the message back
-        message = 'echo: ' + message
+        response = 'echo: ' + message
 
-        writer.write(message.encode())          # immediately send the original data back
+        writer.write(response.encode())          # immediately send the original data back
         await writer.drain()        # block if the send buffer is reached its maximum, until the other side has recieved
         # and the buffer is no full
 
@@ -26,6 +26,7 @@ class ServerClass(threading.Thread):
         if message == self.CLOSE_STRING:
             print("server setting future")
             self.fut.set_result(0)       # set the future with a result and therefore the connection can close
+
 
     def begin_server(self):
         print("beginning server")
