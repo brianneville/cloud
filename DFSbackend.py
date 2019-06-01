@@ -1,26 +1,6 @@
-import mmh3
 import os
-
 import asyncio
-
 import _pickle
-
-
-# def generate_key(password):
-#   return mmh3.hash128(password, 123)
-
-'''
-def parsedcommand(func):
-
-    def wrapping_test(*args, **kwargs):  # start returns a function of the coroutine that has progressed to
-        print(args)                     # args contains the self DFS object
-        #                               kwargs will contain a dictionary of specified arguments
-        print(kwargs)
-        initialised = func(*args, kwargs['file_path'])
-        return initialised
-
-    return wrapping_test
-'''
 
 HOME_DIR_NAME = '_/'
 
@@ -47,19 +27,14 @@ async def tcp_echo_client(send_msg, event_loop) ->None:
     print("data= " + data.decode())
     writer.close()
 
-open_dir_args = ['full_path','back_dirpath','home']
 
-
-def parsedcommand(func):
+def parsedcommand(func)->object:
     def wrapper(*args, **kwargs):
-        if kwargs['open_dir_choice'] >= 0:
-            chosen_arg = open_dir_args[kwargs['open_dir_choice']]
-            print(chosen_arg)
-            initialised = func(*args, kwargs[chosen_arg])
-
-        else:
-            initialised = func(*args, kwargs['current_dirpath'], kwargs['full_path'])
-        return initialised
+        d = []
+        relevant_ones = kwargs['relevant_kwargs']
+        for k in relevant_ones:
+            d.append(kwargs[k])
+        return func(args, *d)       # flatten out list
 
     return wrapper
 
@@ -85,14 +60,14 @@ class DFShandler:
         except FileNotFoundError:
             pickle_obj(fname, self.graph)
 
-        self.parseoptions = {       # 'key':
-            'cd': self.open_dir,
-            'home': self.open_dir,
-            'back': self.open_dir,
-            'get': self.get_file,
-            'up': self.upload_file,
-            'fnew': self.add_to_folder,
-            'fdel': self.remove_from_folder
+        self.parseoptions = {       # 'key': (function, kwargs)
+            'cd': (self.open_dir, ['full_path']),
+            'home': (self.open_dir, ['home']),
+            'back': (self.open_dir, ['back_dirpath']),
+            'get': (self.get_file, ['full_path']),
+            'up': (self.upload_file, ['subject']),
+            'fnew': (self.add_folder, ['current_dirpath', 'full_path']),
+            'fdel': (self.remove_folder, ['current_dirpath', 'full_path'])
         }
 
     def divide_into_chunks(self, filepath) ->(str, list):
@@ -133,12 +108,16 @@ class DFShandler:
         pass
 
     @parsedcommand
-    async def upload_file(self, filepath):
+    def upload_file(self, filepath):        # make this async def if needed ?
         #   asynchronously upload all files to server
+        print(f'new file to uplaod from user={filepath}')
+        pass
+        '''
         fname, client_chunks = self.divide_into_chunks(filepath)
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.send_chunks(fname, client_chunks))  # ?
         loop.close()
+        '''
 
     @parsedcommand
     def open_dir(self, new_dir_path):
@@ -152,23 +131,27 @@ class DFShandler:
         print(f"file to get: {file_path}")
 
     @parsedcommand
-    def add_to_folder(self, dirpath, filepath):     # dir path of parent folder
+    def add_folder(self, dirpath, folderpath):     # dir path of parent folder
         # add an item to a parent folder
-        print(f"parent folder {dirpath}, new file name = {filepath}")
+        print(f"parent folder {dirpath}, new file path = {folderpath}")   # file can also be a f
         pass
+        '''
         curr = self.graph[dirpath]
-        curr.append(filepath)
+        curr.append(folderpath)
         self.graph[dirpath] = curr
         # TODO: upload_file
+        '''
 
     @parsedcommand
-    def remove_from_folder(self, dirpath, filepath):
+    def remove_folder(self, dirpath, folderpath):
         # remove an item from a parent folder
-        print(f"parent folder {dirpath}, file to remove name = {filepath}")
+        print(f"parent folder {dirpath}, file to remove path = {folderpath}")
         pass
+        '''
         curr = self.graph[dirpath]
-        curr.remove(filepath)
+        curr.remove(folderpath)
         self.graph[dirpath] = curr
+        '''
         # TODO: send delete message to servers
 
     def parse(self, msg, current_dirpath):
@@ -189,18 +172,14 @@ class DFShandler:
         if msg[-1:] == '/' or (subject is not None and subject.find('.') >= 0):
             full_path = current_dirpath + subject
 
-        # when using open dir commands, 0 is open sub dir, 1 is back, 2 is home
-        use_cur_dir = msg.find('cd')
-        use_cur_dir = 1 if not msg.find('back') else use_cur_dir    # 'if not find' will be true if back is at the start
-        use_cur_dir = 2 if not msg.find('home') else use_cur_dir        # of the msg
-        # default value for none of these commads found is -1
-
-        self.parseoptions[command](
-            open_dir_choice=use_cur_dir,
+        func, args = self.parseoptions[command]
+        func(
+            relevant_kwargs=args,
             current_dirpath=current_dirpath,
             home=HOME_DIR_NAME,
             back_dirpath=None if command != 'back' else get_backpath(current_dirpath),
-            full_path=full_path
+            full_path=full_path, 
+            subject=subject
         )
         # yeah i know this might not be incredibly efficient/perfect but i just wanted to use decorators
 
@@ -208,11 +187,14 @@ class DFShandler:
 dfs = DFShandler(uid=1234)
 dfs.servers_available = 3
 # dfs.divide_into_chunks('D:/Users/Brian/PycharmProjects/dfs/undivided.txt')
-# dfs.parse('cd sub2/', '_/parent/sub1/')
-# dfs.parse('home', '_/parent/sub1/')
-# dfs.parse('back', '_/parent/sub1/')
-# dfs.parse('get filena.dat', './parent/sub1/')
-# dfs.parse('up c:/users/brn/filex.txt', './parent/sub1/')
+dfs.parse('cd sub2/', '_/parent/sub1/')
+dfs.parse('home', '_/parent/sub1/')
+dfs.parse('back', '_/parent/sub1/')
+dfs.parse('get filena.dat', './parent/sub1/')
+dfs.parse('up c:/users/brn/filex.txt', './parent/sub1/')
+dfs.parse('fnew folder101/', './parent/sub1/')
+dfs.parse('fdel folder101/', './parent/sub1/')
+
 
 # dfs.get_file(file_path='./f1/f2/', testing= 1)
 # dump_client_graph( str(dfs.uid),graph0)
