@@ -181,12 +181,14 @@ class DFShandler:
             full_path=full_path, 
             subject=subject
         )
-        # yeah i know this might not be incredibly efficient/perfect but i just wanted to use decorators
+        # yeah i know this might not be incredibly efficient/perfect? but i just wanted to use decorators
 
-
+"""
 dfs = DFShandler(uid=1234)
 dfs.servers_available = 3
 # dfs.divide_into_chunks('D:/Users/Brian/PycharmProjects/dfs/undivided.txt')
+
+# testing the file parsing
 dfs.parse('cd sub2/', '_/parent/sub1/')
 dfs.parse('home', '_/parent/sub1/')
 dfs.parse('back', '_/parent/sub1/')
@@ -194,6 +196,8 @@ dfs.parse('get filena.dat', './parent/sub1/')
 dfs.parse('up c:/users/brn/filex.txt', './parent/sub1/')
 dfs.parse('fnew folder101/', './parent/sub1/')
 dfs.parse('fdel folder101/', './parent/sub1/')
+
+"""
 
 
 # dfs.get_file(file_path='./f1/f2/', testing= 1)
