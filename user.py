@@ -7,8 +7,9 @@ from queue import Queue
 # import ui
 from DFSbackend import DFShandler
 from colors import color_dict
-
 from server import ServerClass
+
+CLOSE_STRING = "close"
 
 
 def send(DEST_IP, DEST_PORT, message, recieve) ->str:
@@ -53,6 +54,15 @@ def extract(item)->(str, str, str):
     return ip, port, msg
 
 
+def split_dirtext(msg) ->(str, str):
+    dir_str, text_str = 'dir:', 'cmd:'
+    dir_start = msg.find(dir_str)
+    text_start = msg.find(text_str)
+
+    cdir = msg[dir_start+len(dir_str):text_start]
+    text = msg[text_start+len(text_str):]
+    return cdir, text
+
 # print(extract('IP:127.0.0.1PORT:30120MSG: this is a message that the client is recieving from the server'))
 
 def processing(item):
@@ -61,8 +71,8 @@ def processing(item):
     # if from app_instance, then put it into the DFS_backend to parse
     # if it specifies a dest_ip that is different from the clients own IP, then send it,
     # if it specifies a dest_ip that is the same as the clients own IP,then this is a msg that we had wanted to recieve
-
     global app_instance
+
     if item is not ' ':
         if item.find('IP:') >= 0 and item.find('PORT:') >= 0 and item.find('MSG:') >= 0:
             IP, PORT, recv_msg = extract(item)
@@ -113,7 +123,7 @@ class User:
         self.SERVER_PORTNUM = SERVER_PORTNUM        # the port number that user is hosting a server on
         self.REMOTE_PORTNUM = REMOTE_PORTNUM      # the port number that the seperate server is using
         self.DEST_IP = DEST_IP
-        self.CLOSE_STRING = "close"  # close the server to the client
+        self.CLOSE_STRING = CLOSE_STRING  # close the server to the client
         self.client_q = client_q
         self.serv_q = serv_q
         self.cond = threading.Condition()
@@ -148,7 +158,6 @@ def main():
     # give the ui a message queue to feed into
     ui.msg_q = msg_q
     app_instance = ui.AppClass()
-
     app_instance.run()
 
     print("exiting sys")

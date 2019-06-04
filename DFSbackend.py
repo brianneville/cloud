@@ -67,7 +67,8 @@ class DFShandler:
             'get': (self.get_file, ['full_path']),
             'up': (self.upload_file, ['subject']),
             'fnew': (self.add_folder, ['current_dirpath', 'full_path']),
-            'fdel': (self.remove_folder, ['current_dirpath', 'full_path'])
+            'fdel': (self.remove_folder, ['current_dirpath', 'full_path']),
+            'help': (self.display_help, [])
         }
 
     def divide_into_chunks(self, filepath) ->(str, list):
@@ -154,11 +155,34 @@ class DFShandler:
         '''
         # TODO: send delete message to servers
 
-    def parse(self, msg, current_dirpath):
+    @parsedcommand
+    def display_help(self):
+        return """
+    _________format guide_________________________
+    msg example: cd subfolder_1     
+    home - go back to the _/ directory (home)        
+    cd - change directory to a sub directory         
+    back - return to the parent directory           
+    get - downlaod a file from a directory          
+    up - upload a file from your pc to a folder   
+    fnew - create a new folder                       
+    fdel - delete a folder                           
+    
+    __examples____________
+    home
+    cd subfolder_1
+    back
+    get file.txt
+    up c:/users/u/file.dat
+    fnew myfolder
+    fdel myfolder
+        """
+
+    def parse(self, msg, current_dirpath) ->str:
         # parses an item from the queue
         # format guide:
         # msg example: cd subfolder_1
-        # home - go back to the . directory (home)
+        # home - go back to the _/ directory (home)
         # cd - change directory to a sub directory
         # back - return to the parent directory unless at home
         # get - downlaod a file from a directory
@@ -171,16 +195,19 @@ class DFShandler:
         command = msg[:space_pos] if space_pos >= 0 else msg        # ex cd
         if msg[-1:] == '/' or (subject is not None and subject.find('.') >= 0):
             full_path = current_dirpath + subject
+        try:
+            func, args = self.parseoptions[command]
 
-        func, args = self.parseoptions[command]
-        func(
-            relevant_kwargs=args,
-            current_dirpath=current_dirpath,
-            home=HOME_DIR_NAME,
-            back_dirpath=None if command != 'back' else get_backpath(current_dirpath),
-            full_path=full_path, 
-            subject=subject
-        )
+            return func(
+                relevant_kwargs=args,
+                current_dirpath=current_dirpath,
+                home=HOME_DIR_NAME,
+                back_dirpath=None if command != 'back' else get_backpath(current_dirpath),
+                full_path=full_path,
+                subject=subject
+            )
+        except KeyError:
+            return "INVALID ARG [type: 'help' to see commands]"
         # yeah i know this might not be incredibly efficient/perfect? but i just wanted to use decorators
 
 """

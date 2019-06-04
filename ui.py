@@ -190,7 +190,7 @@ class SettingsScreen(Screen):
 
 # Declare screens
 class MainScreen(Screen):
-    curr_dir = StringProperty('base')
+    curr_dir = StringProperty('~')
     out = StringProperty('')
     prev_out = out
     indent = ['>', 's', 'c']
@@ -203,7 +203,7 @@ class MainScreen(Screen):
         if txt == '':
             txt = ' '
         if not log_id:
-            msg_q.put(txt)  # only forward message if originates from user
+            msg_q.put("dir:" + self.curr_dir + "cmd:" + txt)  # only forward message if originates from user
         self.out = self.prev_out + '\n' + self.indent[log_id] + txt     # use log_id if plan to show server/client chat
         self.prev_out = self.out
         return txt
