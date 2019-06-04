@@ -1,8 +1,10 @@
 import os
 import asyncio
 import _pickle
+from colors import color_dict
 
 HOME_DIR_NAME = '_/'
+DO_NOT_CHANGE_CURRDIR = '~'
 
 
 def pickle_obj(fname, graph) ->None:
@@ -34,7 +36,7 @@ def parsedcommand(func)->object:
         relevant_ones = kwargs['relevant_kwargs']
         for k in relevant_ones:
             d.append(kwargs[k])
-        return func(args, *d)       # flatten out list
+        return func(args[0], *d)       # flatten out list
 
     return wrapper
 
@@ -45,6 +47,14 @@ def get_backpath(command) ->str:
     return command[:end + 1:]
 
 
+def getfiles_frompaths(flist)->str:
+    files_str = ''
+    for path in flist:
+        path = path[:-1:]  # get the last part of the path
+        path = path[path.rfind('/') + 1:] + '/' + '\n'
+        files_str += path
+    return files_str
+
 class DFShandler:
 
     def __init__(self, uid):
@@ -54,11 +64,12 @@ class DFShandler:
             HOME_DIR_NAME: []         # home directory : ["path/folder_x", "path/folder_y" "path/file.txt" etc ]
             #                 format=  dir: [list of files and directories at this location]
         }
-        fname = "graph_"+str(uid)
+        self.fname = "graph_"+str(uid)
         try:
-            self.graph = unpickle_obj(fname)
+            self.graph = unpickle_obj(self.fname)
+            pass
         except FileNotFoundError:
-            pickle_obj(fname, self.graph)
+            pickle_obj(self.fname, self.graph)
 
         self.parseoptions = {       # 'key': (function, kwargs)
             'cd': (self.open_dir, ['full_path']),
@@ -121,43 +132,57 @@ class DFShandler:
         '''
 
     @parsedcommand
-    def open_dir(self, new_dir_path):
-        print(f'new dir to open={new_dir_path}')
-
-        # return self.graph[new_dir_path] # dir_path has values eg: "./" or "./folder1/folder2/" or "./diffolder1/"
-
-    @parsedcommand
     def get_file(self, file_path):
         # retrieve file from servers online
         print(f"file to get: {file_path}")
 
+
+    @parsedcommand
+    def open_dir(self, new_dir_path):
+        print(f'new dir to open={new_dir_path}')
+        if new_dir_path[len(new_dir_path)-1] != '/':
+            new_dir_path += '/'
+        flist_here = self.graph[new_dir_path]
+        if not flist_here:
+            return new_dir_path, 'This folder is empty'
+        else:
+            return new_dir_path, getfiles_frompaths(flist_here)
+
+
+        # return self.graph[new_dir_path] # dir_path has values eg: "./" or "./folder1/folder2/" or "./diffolder1/"
     @parsedcommand
     def add_folder(self, dirpath, folderpath):     # dir path of parent folder
         # add an item to a parent folder
         print(f"parent folder {dirpath}, new file path = {folderpath}")   # file can also be a f
-        pass
-        '''
-        curr = self.graph[dirpath]
-        curr.append(folderpath)
-        self.graph[dirpath] = curr
-        # TODO: upload_file
-        '''
+        if folderpath == '~':
+            print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
+            return DO_NOT_CHANGE_CURRDIR, "please retry making the folder. e.g. fnew myfolder/"
+        curr_parent_files = self.graph[dirpath]
+        curr_parent_files.append(folderpath)
+        self.graph[folderpath] = []
+        self.graph[dirpath] = curr_parent_files
+        pickle_obj(self.fname, self.graph)  # save the new directory structure
+        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
+
 
     @parsedcommand
     def remove_folder(self, dirpath, folderpath):
         # remove an item from a parent folder
         print(f"parent folder {dirpath}, file to remove path = {folderpath}")
-        pass
-        '''
-        curr = self.graph[dirpath]
-        curr.remove(folderpath)
-        self.graph[dirpath] = curr
-        '''
+        if folderpath == '~':
+            print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
+            return DO_NOT_CHANGE_CURRDIR, "please retry deleting the folder. e.g. fdel myfolder/"
+        curr_parent_files = self.graph[dirpath]
+        curr_parent_files.remove(folderpath)
+        self.graph.pop(folderpath)
+        self.graph[dirpath] = curr_parent_files
+        pickle_obj(self.fname, self.graph)          # save the new directory structure
+        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
         # TODO: send delete message to servers
 
     @parsedcommand
-    def display_help(self):
-        return """
+    def display_help(self):      # returns:  'directory to change current dir to if any' , output
+        return DO_NOT_CHANGE_CURRDIR, """                              
     _________format guide_________________________
     msg example: cd subfolder_1     
     home - go back to the _/ directory (home)        
@@ -178,7 +203,7 @@ class DFShandler:
     fdel myfolder
         """
 
-    def parse(self, msg, current_dirpath) ->str:
+    def parse(self, msg, current_dirpath) ->(str, str):
         # parses an item from the queue
         # format guide:
         # msg example: cd subfolder_1
@@ -189,7 +214,8 @@ class DFShandler:
         # up - upload a file from your pc to the servers
         # fnew - create a new folder
         # fdel - delete a folder
-        full_path = None    # full path is the entire path for the file or dir to be used for indexing the graph dict
+        full_path = DO_NOT_CHANGE_CURRDIR
+        # full path is the entire path for the file or dir to be used for indexing the graph dict
         space_pos = msg.find(' ')
         subject = msg[space_pos+1:] if space_pos >= 0 else None     # ex subfolder1
         command = msg[:space_pos] if space_pos >= 0 else msg        # ex cd
@@ -198,7 +224,7 @@ class DFShandler:
         try:
             func, args = self.parseoptions[command]
 
-            return func(
+            output = func(
                 relevant_kwargs=args,
                 current_dirpath=current_dirpath,
                 home=HOME_DIR_NAME,
@@ -206,8 +232,9 @@ class DFShandler:
                 full_path=full_path,
                 subject=subject
             )
+            return output[0], output[1]
         except KeyError:
-            return "INVALID ARG [type: 'help' to see commands]"
+            return DO_NOT_CHANGE_CURRDIR, "INVALID ARG [type: 'help' to see commands]"
         # yeah i know this might not be incredibly efficient/perfect? but i just wanted to use decorators
 
 """

@@ -25,7 +25,6 @@ class ServerClass(threading.Thread):
         await writer.drain()        # block if the send buffer is reached its maximum, until the other side has recieved
         # and the buffer is no full
 
-        print("Close server socket")
         writer.close()
         if message[message.find('MSG:')+len('MSG:'):] == self.CLOSE_STRING:
             print("server setting future")

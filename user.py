@@ -5,7 +5,7 @@ import sys
 import threading
 from queue import Queue
 # import ui
-from DFSbackend import DFShandler
+from DFSbackend import DFShandler, DO_NOT_CHANGE_CURRDIR
 from colors import color_dict
 from server import ServerClass
 
@@ -65,27 +65,50 @@ def split_dirtext(msg) ->(str, str):
 
 # print(extract('IP:127.0.0.1PORT:30120MSG: this is a message that the client is recieving from the server'))
 
+
+def format_diroutput(dir_to_change, output) -> str:
+    print("dir change, op = ",dir_to_change, output)
+    return "!dircng:" + dir_to_change + "!Outp:" + output
+
+
+def getchangedir_op(text) ->(str, str):
+    dir_str, text_str = '!dircng:', '!Outp:'
+    dir_start = text.find(dir_str)
+    text_start = text.find(text_str)
+
+    chngdir = text[dir_start+len(dir_str):text_start]
+    op = text[text_start+len(text_str):]
+    return chngdir, op
+
 def processing(item):
     # process the message. try to extract keywords from it
     # if there is no proper format to it, then it has come from the app_instance.
     # if from app_instance, then put it into the DFS_backend to parse
     # if it specifies a dest_ip that is different from the clients own IP, then send it,
     # if it specifies a dest_ip that is the same as the clients own IP,then this is a msg that we had wanted to recieve
-    global app_instance
+    global app_instance, user
 
     if item is not ' ':
         if item.find('IP:') >= 0 and item.find('PORT:') >= 0 and item.find('MSG:') >= 0:
             IP, PORT, recv_msg = extract(item)
+            change_dir, output = getchangedir_op(recv_msg)
+            app_instance.update_files(f'{output}')
+            if change_dir is not DO_NOT_CHANGE_CURRDIR:
+                app_instance.update_curr_dir(change_dir)
+        elif item == CLOSE_STRING:
+            # shut off user server when closing. if this is not here, then the CLOSE_STRING will be sent to remote,
+            # and remote will shutdown when user closes their ui terminal
+            send(user.HOST_IP, user.SERVER_PORTNUM,
+                 formatmsg(host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
+                 recieve=False)
+
         else:
             # account for the user accidentally pressing enter
             #  TODO: DEST_IP, PORT_NUM, msg = parse(item)
             # DEST_IP, PORT_NUM, msg = DFSbackend.parse(item)
-            global user
             recv_msg = send(user.DEST_IP, user.REMOTE_PORTNUM,
                             formatmsg(host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
                             recieve=False)
-
-        app_instance.update_files(f'{recv_msg}')
 
 
 class ClientHandler(threading.Thread):

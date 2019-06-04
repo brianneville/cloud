@@ -2,15 +2,8 @@ from user import User
 import os
 from queue import Queue
 from colors import color_dict
-from user import send, extract, formatmsg, split_dirtext, CLOSE_STRING
+from user import send, extract, formatmsg, split_dirtext, CLOSE_STRING, format_diroutput
 from DFSbackend import DFShandler
-
-def server_send(DEST_IP, PORT_NUM, item):
-    pass
-
-
-def server_save(item):
-    pass
 
 
 def serv_processing(item):
@@ -23,16 +16,13 @@ def serv_processing(item):
                         recieve=False)
         return
     curr_dir, text = split_dirtext(msg)
-    output = dfs_handler.parse(current_dirpath=curr_dir, msg=text)
-
+    dir_to_change, output = dfs_handler.parse(current_dirpath=curr_dir, msg=text)
 
     recv_msg = send(remote_ip, int(remote_port),
                    formatmsg(host_portnum=seperate_server.SERVER_PORTNUM,
                              host_ip=seperate_server.HOST_IP,
-                             item='serv_processed: ' + output),
+                             item=format_diroutput(dir_to_change, output)),
                     recieve=False)
-
-
 
 
 def main():

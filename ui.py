@@ -125,7 +125,8 @@ AppScreenManager:
 
         Label:
             color: {black}
-            text: 'dir: ' +root.curr_dir
+            text: ' dir: ' +app.curr_dir
+            bold: True
             text_size: self.size
             valign: 'center'
             halign: 'left'
@@ -171,7 +172,8 @@ AppScreenManager:
                     size: self.size
             Label:
                 color: {black}
-                text: 'list of files at this dir: \\n ---- \\n' + app.files
+                padding: (10, 5)
+                text: app.files
                 text_size: self.size
                 valign: 'top'
                 halign: 'left' 
@@ -179,6 +181,7 @@ AppScreenManager:
 
 """
 
+app_curr_dir = ''
 
 class AppScreenManager(ScreenManager):
     pass
@@ -190,20 +193,16 @@ class SettingsScreen(Screen):
 
 # Declare screens
 class MainScreen(Screen):
-    curr_dir = StringProperty('~')
     out = StringProperty('')
     prev_out = out
     indent = ['>', 's', 'c']
-
-    def update_currdir(self, new_dir):
-        self.curr_dir = new_dir
 
     def sent_cmd(self, txt, log_id):
         print("entered " + txt)
         if txt == '':
             txt = ' '
         if not log_id:
-            msg_q.put("dir:" + self.curr_dir + "cmd:" + txt)  # only forward message if originates from user
+            msg_q.put("dir:" + app_curr_dir + "cmd:" + txt)  # only forward message if originates from user
         self.out = self.prev_out + '\n' + self.indent[log_id] + txt     # use log_id if plan to show server/client chat
         self.prev_out = self.out
         return txt
@@ -222,14 +221,23 @@ class MainScreen(Screen):
 
 
 class AppClass(App):
-    files = StringProperty('initial set')
+    files = StringProperty("enter 'home' to begin")
+    curr_dir = StringProperty('~')
+    global app_curr_dir
 
     def build(self):
+        global app_curr_dir
+        app_curr_dir = self.curr_dir
         self.title = 'DFS'
         return Builder.load_string(gui)
 
     def update_files(self, new):
         self.files = new
+
+    def update_curr_dir(self, new_dir):
+        global app_curr_dir
+        self.curr_dir = new_dir
+        app_curr_dir = new_dir
 
     def exit(self):
         print("putting into q")
