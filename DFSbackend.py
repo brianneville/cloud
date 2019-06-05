@@ -36,7 +36,7 @@ def parsedcommand(func)->object:
         relevant_ones = kwargs['relevant_kwargs']
         for k in relevant_ones:
             d.append(kwargs[k])
-        return func(args[0], *d)       # flatten out list
+        return func(args[0], *d)       # unzip list
 
     return wrapper
 
@@ -140,6 +140,8 @@ class DFShandler:
     @parsedcommand
     def open_dir(self, new_dir_path):
         print(f'new dir to open={new_dir_path}')
+        if new_dir_path == '':
+            return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(self.graph[HOME_DIR_NAME])
         if new_dir_path[len(new_dir_path)-1] != '/':
             new_dir_path += '/'
         flist_here = self.graph[new_dir_path]
@@ -169,6 +171,7 @@ class DFShandler:
     def remove_folder(self, dirpath, folderpath):
         # remove an item from a parent folder
         print(f"parent folder {dirpath}, file to remove path = {folderpath}")
+        # TODO make this remove all subfolders
         if folderpath == '~':
             print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
             return DO_NOT_CHANGE_CURRDIR, "please retry deleting the folder. e.g. fdel myfolder/"
@@ -178,7 +181,6 @@ class DFShandler:
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)          # save the new directory structure
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
-        # TODO: send delete message to servers
 
     @parsedcommand
     def display_help(self):      # returns:  'directory to change current dir to if any' , output
@@ -205,15 +207,6 @@ class DFShandler:
 
     def parse(self, msg, current_dirpath) ->(str, str):
         # parses an item from the queue
-        # format guide:
-        # msg example: cd subfolder_1
-        # home - go back to the _/ directory (home)
-        # cd - change directory to a sub directory
-        # back - return to the parent directory unless at home
-        # get - downlaod a file from a directory
-        # up - upload a file from your pc to the servers
-        # fnew - create a new folder
-        # fdel - delete a folder
         full_path = DO_NOT_CHANGE_CURRDIR
         # full path is the entire path for the file or dir to be used for indexing the graph dict
         space_pos = msg.find(' ')
