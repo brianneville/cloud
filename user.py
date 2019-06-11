@@ -3,6 +3,7 @@
 import socket
 import sys
 import threading
+from messaging import *
 from queue import Queue
 # import ui
 from DFSbackend import DFShandler, DO_NOT_CHANGE_CURRDIR
@@ -32,54 +33,6 @@ def send(DEST_IP, DEST_PORT, message, recieve) ->str:
 
         return recv_data  # return nothing if the message is being sent but not recieved
 
-
-def formatmsg(host_ip, host_portnum,item)->str:
-    item = f'SRCIP:{host_ip}PORT:{host_portnum}MSG:{item}'
-    return item
-
-
-def extract(item)->(str, str, str):
-    # format is either IP:IP, PORT:PORT, MSG:msg or just msg ( if the message is from the app_instance
-    # e.g. IP:127.0.0.1PORT:30120MSG: this is a message that the client is recieving from the server
-    # IP and PORT are the IP and port of the server for the client that sent the message
-    #  i.e. the ip, port that the server should respond to
-    ip_str, port_str, msg_str = 'IP:', 'PORT:', 'MSG:'
-    ip_start = item.find(ip_str)
-    port_start = item.find(port_str)
-    msg_start = item.find(msg_str)
-    ip = item[ip_start+len(ip_str):port_start]
-    port = item[port_start+len(port_str):msg_start]
-    msg = item[msg_start+len(msg_str):]
-
-    return ip, port, msg
-
-
-def split_dirtext(msg) ->(str, str):
-    dir_str, text_str = 'dir:', 'cmd:'
-    dir_start = msg.find(dir_str)
-    text_start = msg.find(text_str)
-
-    cdir = msg[dir_start+len(dir_str):text_start]
-    text = msg[text_start+len(text_str):]
-    return cdir, text
-
-# print(extract('IP:127.0.0.1PORT:30120MSG: this is a message that the client is recieving from the server'))
-
-
-def format_diroutput(dir_to_change, output) -> str:
-    print("dir change, op = ",dir_to_change, output)
-    return "!dircng:" + dir_to_change + "!Outp:" + output
-
-
-def getchangedir_op(text) ->(str, str):
-    dir_str, text_str = '!dircng:', '!Outp:'
-    dir_start = text.find(dir_str)
-    text_start = text.find(text_str)
-
-    chngdir = text[dir_start+len(dir_str):text_start]
-    op = text[text_start+len(text_str):]
-    return chngdir, op
-
 def processing(item):
     # process the message. try to extract keywords from it
     # if there is no proper format to it, then it has come from the app_instance.
@@ -87,10 +40,11 @@ def processing(item):
     # if it specifies a dest_ip that is different from the clients own IP, then send it,
     # if it specifies a dest_ip that is the same as the clients own IP,then this is a msg that we had wanted to recieve
     global app_instance, user
-
+    USER_UID = 101
     if item is not ' ':
         if item.find('IP:') >= 0 and item.find('PORT:') >= 0 and item.find('MSG:') >= 0:
-            IP, PORT, recv_msg = extract(item)
+            # recieving items from remote
+            UID, IP, PORT, recv_msg = extract(item)
             change_dir, output = getchangedir_op(recv_msg)
             app_instance.update_files(f'{output}')
             if change_dir is not DO_NOT_CHANGE_CURRDIR:
@@ -99,16 +53,14 @@ def processing(item):
             # shut off user server when closing. if this is not here, then the CLOSE_STRING will be sent to remote,
             # and remote will shutdown when user closes their ui terminal
             send(user.HOST_IP, user.SERVER_PORTNUM,
-                 formatmsg(host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
+                 formatmsg(uid=USER_UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
                  recieve=False)
 
         else:
-            # account for the user accidentally pressing enter
-            #  TODO: DEST_IP, PORT_NUM, msg = parse(item)
-            # DEST_IP, PORT_NUM, msg = DFSbackend.parse(item)
-            recv_msg = send(user.DEST_IP, user.REMOTE_PORTNUM,
-                            formatmsg(host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
-                            recieve=False)
+            # user entered something, format this item, and send to remote
+            send(user.DEST_IP, user.REMOTE_PORTNUM,
+                 formatmsg(uid=USER_UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
+                 recieve=False)
 
 
 class ClientHandler(threading.Thread):
@@ -116,7 +68,7 @@ class ClientHandler(threading.Thread):
     def __init__(self, ip, port_num, q, cond, processing_func):
         super(ClientHandler, self).__init__()
         self.DEST_IP = ip               # TODO: this will have to be removed. dest_ip and port num will be
-        self.DEST_PORT = port_num        # found by reading the messages from the queue: Format is "DEST_IP PORT_NUM msg"
+        self.DEST_PORT = port_num       # found by reading the messages from the queue: Format is "DEST_IP PORT_NUM msg"
         self.q = q      # this queue will have messages
         self.cond = cond
         self.processing_func = processing_func
@@ -132,7 +84,7 @@ class ClientHandler(threading.Thread):
                 if item is not None:
                     break
                 self.cond.wait()    # sleep until receive signal that queue is not empty
-                # #TODO: this somehow gets signalled from somewhere
+                # #TODO: this somehow gets signalled from somewhere?
             self.cond.release()     # release mutex
             # process message from queue
             print(f"processing message: {item}")
@@ -169,9 +121,6 @@ class User:
 
 def main():
     global app_instance, user_s, user_c, user
-    DEFAULT_UID = 701
-    global DFS
-    DFS = DFShandler(DEFAULT_UID)  # TODO DFS handling --  priority
     msg_q = Queue()
     # server doesnt need to send items to the client q
     user = User(serv_q=msg_q, client_q=msg_q, HOST_IP='127.0.0.1', SERVER_PORTNUM=9001, DEST_IP='127.0.0.1',

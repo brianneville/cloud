@@ -11,6 +11,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import StringProperty
 from kivy.clock import Clock
 
+from messaging import combine_dirtext
 kivy.require('1.10.1')
 
 
@@ -21,6 +22,7 @@ green = 0.26, 0.95, 0.40, 1
 file_background = 189 / 255, 229 / 255, 237 / 255, 1
 grey = 81 / 255, 226 / 255, 1, 1
 white = 0.7, 0.8, 0.8, 1  # white
+text_input_color = 2/255, 221/255, 237/255, 1
 
 app = wx.App(False)
 wxwidth, wxheight = wx.GetDisplaySize()
@@ -68,7 +70,53 @@ AppScreenManager:
             on_release:
                 root.manager.transition.direction = 'up'
                 root.manager.current='main'
-
+        Label:
+            text: 'Enter username:'
+            color: {black}
+            size_hint: 0.29, 0.1
+            valign: 'center'
+            halign: 'left'
+            text_size: self.size
+            font_size: 19
+            pos: {window_width*0.05}, {window_height/2 + 0.2*window_height - 21}
+        Label:
+            text: 'Enter password:'
+            color: {black}
+            size_hint: 0.29, 0.1
+            valign: 'center'
+            halign: 'left'
+            text_size: self.size
+            font_size: 19
+            pos: {window_width*0.05}, {window_height/2 -21}
+        TextInput:
+            id: username_textinput_id
+            background_color: {text_input_color}
+            background_normal: ''
+            size_hint: 0.7, 0.1
+            font_size: 25
+            text_size: self.size
+            padding_y: 20
+            pos: {window_width*0.05+21}, {window_height/2 + 0.1*window_height -20}
+            multiline: False        
+            on_text_validate:
+                app.username = self.text
+            
+        TextInput:
+            id: password_textinput_id
+            password: True
+            password_mask:'•'
+            background_color: {text_input_color}
+            background_normal: ''
+            size_hint: 0.7, 0.1
+            font_size: 25
+            text_size: self.size
+            padding_y: 20
+            pos: {window_width*0.05 +21}, {window_height/2 -22 - 0.1*window_height}
+            multiline: False
+            on_text_validate:
+                app.password = self.text
+                app.set_logins()
+            
 
 
 
@@ -90,7 +138,7 @@ AppScreenManager:
             on_release:
                 app.exit()
         Button:
-            text: 'options'
+            text: 'login'
             color: {black}
             background_color: {green}
             background_normal: ''
@@ -202,7 +250,7 @@ class MainScreen(Screen):
         if txt == '':
             txt = ' '
         if not log_id:
-            msg_q.put("dir:" + app_curr_dir + "cmd:" + txt)  # only forward message if originates from user
+            msg_q.put(combine_dirtext(app_curr_dir, txt))  # only forward message if originates from user
         self.out = self.prev_out + '\n' + self.indent[log_id] + txt     # use log_id if plan to show server/client chat
         self.prev_out = self.out
         return txt
@@ -224,6 +272,8 @@ class AppClass(App):
     files = StringProperty("enter 'home' to begin")
     curr_dir = StringProperty('~')
     global app_curr_dir
+    username = StringProperty()
+    password = StringProperty()
 
     def build(self):
         global app_curr_dir
@@ -245,6 +295,12 @@ class AppClass(App):
         print("closing app")
         time.sleep(0.5)         # TODO: is this sleep needed - probably not? remove it?
         self.stop()
+
+    def setlogins(self):
+        pass
+        # TODO: make it so that this saves the username and password into a file where they can be read by the
+        # dfsbackend and by the user to stay signed in when reopening the app. have textinputs display username/password
+        # values on startup of terminal UI
 
 
 def start():

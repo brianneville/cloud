@@ -1,4 +1,3 @@
-import os
 import asyncio
 import _pickle
 from colors import color_dict
@@ -55,16 +54,17 @@ def getfiles_frompaths(flist)->str:
         files_str += path
     return files_str
 
+
 class DFShandler:
 
-    def __init__(self, uid):
+    def __init__(self, uid, FOLDER_PATH):
         self.servers_available = None   # the amount of servers avaiable for the client to distribute files on
         self.uid = uid
         self.graph = {
             HOME_DIR_NAME: []         # home directory : ["path/folder_x", "path/folder_y" "path/file.txt" etc ]
             #                 format=  dir: [list of files and directories at this location]
         }
-        self.fname = "graph_"+str(uid)
+        self.fname = FOLDER_PATH + "graph_"+str(uid)
         try:
             self.graph = unpickle_obj(self.fname)
             pass
@@ -76,66 +76,36 @@ class DFShandler:
             'home': (self.open_dir, ['home']),
             'back': (self.open_dir, ['back_dirpath']),
             'get': (self.get_file, ['full_path']),
-            'up': (self.upload_file, ['subject']),
+            'up': (self.upload_file, ['current_dirpath','subject']),
             'fnew': (self.add_folder, ['current_dirpath', 'full_path']),
             'fdel': (self.remove_folder, ['current_dirpath', 'full_path']),
             'help': (self.display_help, [])
         }
 
-    def divide_into_chunks(self, filepath) ->(str, list):
-        flen = os.path.getsize(filepath)
-        pos = filepath.__len__() - filepath[::-1].find('/')
-        ext_pos = filepath.find('.')
-        fname = filepath[pos:ext_pos]
-        ext_type = filepath[ext_pos:]
-        chunks_size = round(flen/self.servers_available)
-        client_chunks = []
-        count, file_indx = 0, 0   # set count to the max chunks size
-        new_path = os.getcwd().replace("\\", "/") + f"/user_{self.uid}/"     # put all user chunks into the uid folder
-        if not os.path.isdir(new_path):
-            os.mkdir(new_path, 0o777)
-
-        with open(filepath, 'rb') as srcfile:
-            fbyte = srcfile.read(1)
-            while fbyte != b'':
-                print(fbyte)
-                if not count:
-                    count = chunks_size
-                    try:
-                        opfile.close()
-                    except UnboundLocalError:
-                        print("unbound local error caught, file was not created ")
-                    client_chunks.append( new_path + "/" + fname + str(file_indx) + ext_type)
-                    opfile = open(client_chunks[file_indx], 'wb')
-                    file_indx += 1
-
-                opfile.write(fbyte)
-                count -= 1
-                fbyte = srcfile.read(1)
-                print(count, chunks_size)
-        opfile.close()
-        return fname, client_chunks
-
-    async def send_chunks(self, fname, client_chunks):
-        pass
-
     @parsedcommand
-    def upload_file(self, filepath):        # make this async def if needed ?
+    def upload_file(self, dirpath, filepath):        # make this async def if needed ?
         #   asynchronously upload all files to server
-        print(f'new file to uplaod from user={filepath}')
-        pass
+        print(f'new file to uplaod from user is {filepath}. upload into current dir: {dirpath}')
+        if filepath == '~':
+            print(color_dict['cyan'] + "this file could not be uploaded" + color_dict['reset'])
+            return DO_NOT_CHANGE_CURRDIR, "please retry uploading the file. e.g. up c:/users/name/folder/file.txt"
+        curr_parent_files = self.graph[dirpath]
+        curr_parent_files.append(filepath)
+        self.graph[dirpath] = curr_parent_files
+        pickle_obj(self.fname, self.graph)  # save the new directory structure
         '''
         fname, client_chunks = self.divide_into_chunks(filepath)
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.send_chunks(fname, client_chunks))  # ?
         loop.close()
         '''
+        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
+
 
     @parsedcommand
     def get_file(self, file_path):
         # retrieve file from servers online
         print(f"file to get: {file_path}")
-
 
     @parsedcommand
     def open_dir(self, new_dir_path):
@@ -150,8 +120,8 @@ class DFShandler:
         else:
             return new_dir_path, getfiles_frompaths(flist_here)
 
-
         # return self.graph[new_dir_path] # dir_path has values eg: "./" or "./folder1/folder2/" or "./diffolder1/"
+
     @parsedcommand
     def add_folder(self, dirpath, folderpath):     # dir path of parent folder
         # add an item to a parent folder
@@ -165,7 +135,6 @@ class DFShandler:
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)  # save the new directory structure
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
-
 
     @parsedcommand
     def remove_folder(self, dirpath, folderpath):
@@ -230,6 +199,7 @@ class DFShandler:
             return DO_NOT_CHANGE_CURRDIR, "INVALID ARG [type: 'help' to see commands]"
         # yeah i know this might not be incredibly efficient/perfect? but i just wanted to use decorators
 
+
 """
 dfs = DFShandler(uid=1234)
 dfs.servers_available = 3
@@ -246,21 +216,49 @@ dfs.parse('fdel folder101/', './parent/sub1/')
 
 """
 
-
 # dfs.get_file(file_path='./f1/f2/', testing= 1)
 # dump_client_graph( str(dfs.uid),graph0)
 # graph2 = load_client_graph(str(dfs.uid))
 # print(graph2)
 
+'''
+def divide_into_chunks(self, filepath) ->(str, list):
+    flen = os.path.getsize(filepath)
+    pos = filepath.__len__() - filepath[::-1].find('/')
+    ext_pos = filepath.find('.')
+    fname = filepath[pos:ext_pos]
+    ext_type = filepath[ext_pos:]
+    chunks_size = round(flen/self.servers_available)
+    client_chunks = []
+    count, file_indx = 0, 0   # set count to the max chunks size
+    new_path = os.getcwd().replace("\\", "/") + f"/user_{self.uid}/"     # put all user chunks into the uid folder
+    if not os.path.isdir(new_path):
+        os.mkdir(new_path, 0o777)
 
+    with open(filepath, 'rb') as srcfile:
+        fbyte = srcfile.read(1)
+        while fbyte != b'':
+            print(fbyte)
+            if not count:
+                count = chunks_size
+                try:
+                    opfile.close()
+                except UnboundLocalError:
+                    print("unbound local error caught, file was not created ")
+                client_chunks.append(new_path + "/" + fname + str(file_indx) + ext_type)
+                opfile = open(client_chunks[file_indx], 'wb')
+                file_indx += 1
 
+            opfile.write(fbyte)
+            count -= 1
+            fbyte = srcfile.read(1)
+            print(count, chunks_size)
+    opfile.close()
+    return fname, client_chunks
 
-
-
-
-
-
-
+async def send_chunks(self, fname, client_chunks):
+    pass
+'''
 
 
 # TODO: things to do for distributed file system:
@@ -278,7 +276,7 @@ dfs.parse('fdel folder101/', './parent/sub1/')
 
 
 
-# TODO: things to do for torrenting and distributed filesystem:
+# TODO: things to do for torrenting and distributed filesystem?:
 # goal: make a distributed file system where files are torrented between users
 # 1. generate secure private key to encyrpt user data
 #       - generate public

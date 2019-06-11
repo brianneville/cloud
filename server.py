@@ -12,7 +12,7 @@ class ServerClass(threading.Thread):
         data = await reader.read(1000)   # read up to 100 bytes
         message = data.decode()         # decode byte object
 
-        addr = writer.get_extra_info('peername')
+        # addr = writer.get_extra_info('peername')
         # print(f"client message is: {message}\n client address is: {addr}")
         if self.msq_q is not None:      # for the seperate servers , we need to pass the message back to the client to
             #                             process
