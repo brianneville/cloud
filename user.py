@@ -1,17 +1,17 @@
 # this class will be used to set up a user server and handle client
-
+import mmh3
 import socket
 import sys
 import threading
 from messaging import *
 from queue import Queue
 # import ui
-from DFSbackend import DFShandler, DO_NOT_CHANGE_CURRDIR
+from DFSbackend import DO_NOT_CHANGE_CURRDIR
 from colors import color_dict
 from server import ServerClass
 
-CLOSE_STRING = "close"
 
+SEED_MMH3 = 224116062019
 
 def send(DEST_IP, DEST_PORT, message, recieve) ->str:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -40,12 +40,17 @@ def processing(item):
     # if it specifies a dest_ip that is different from the clients own IP, then send it,
     # if it specifies a dest_ip that is the same as the clients own IP,then this is a msg that we had wanted to recieve
     global app_instance, user
-    USER_UID = 101      # TODO: get this value from the user entering it through app_instance
+    # USER_UID = 101      # TODO: get this value from the user entering it through app_instance
     if item is not ' ':
         if item.find('IP:') >= 0 and item.find('PORT:') >= 0 and item.find('MSG:') >= 0:
             # recieving items from remote
             UID, IP, PORT, recv_msg = extract(item)
             change_dir, output = getchangedir_op(recv_msg)
+            if output == LOGIN_PASS:        # check if the users password entered matches the one in remote
+                user.authorised_login = True
+                app_instance.update_files("type 'home' to begin")
+                return
+
             app_instance.update_files(f'{output}')
             if change_dir is not DO_NOT_CHANGE_CURRDIR:
                 app_instance.update_curr_dir(change_dir)
@@ -59,15 +64,30 @@ def processing(item):
             # shut off user server when closing. if this is not here, then the CLOSE_STRING will be sent to remote,
             # and remote will shutdown when user closes their ui terminal
             send(user.HOST_IP, user.SERVER_PORTNUM,
-                 formatmsg(uid=USER_UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
+                 formatmsg(uid=user.UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
                  recieve=False)
 
         else:
             # user entered something, format this item, and send to remote
             # check if the user is trying to upload a file
+
+            if not user.authorised_login:   # hash passsword and send to remote to authorise login
+                if item == 'dir:~cmd:login':
+                    username = app_instance.username
+                    password = app_instance.password
+                    if username == '' or password == '':
+                        return
+                    user.UID = username
+                    item += ' ' + str(mmh3.hash(password, seed=SEED_MMH3))
+                    send(user.DEST_IP, user.REMOTE_PORTNUM,
+                         formatmsg(uid=user.UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
+                         recieve=False)
+                else:
+                    print('unathorised')
+                    return
             cdir, text = split_dirtext(item)
             up_pos = text.find('up ')
-            if not up_pos:
+            if not up_pos:  # ie: if the first part of this is 'up '
                 new_cmd = parse_uploadfile(text)
                 if new_cmd == text:
                     # then the file has not been found
@@ -75,7 +95,7 @@ def processing(item):
                     return
                 item = combine_dirtext(cdir, new_cmd)
             send(user.DEST_IP, user.REMOTE_PORTNUM,
-                 formatmsg(uid=USER_UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
+                 formatmsg(uid=user.UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
                  recieve=False)
 
 
@@ -119,6 +139,8 @@ class User:
         self.serv_q = serv_q
         self.cond = threading.Condition()
         self.proc_func = proc_func
+        self.authorised_login = False
+        self.UID = None
 
     def start_both(self) ->(threading.Thread, threading.Thread):
         # start server

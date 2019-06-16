@@ -23,7 +23,7 @@ def serv_processing(item):
     # make a user-specific instance of the dfs handler (and run it in a seperate thread?)
     #  using the Users UID from the message
     FOLDER_PATH = os.getcwd().replace("\\", "/") + '/' + str(user_uid) + "_folder/"
-    print(FOLDER_PATH)
+    # print(FOLDER_PATH)
     if not os.path.isdir(FOLDER_PATH):
         os.mkdir(FOLDER_PATH, 0o777)
 

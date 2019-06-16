@@ -1,5 +1,9 @@
 import os
 
+CLOSE_STRING = "close"
+LOGIN_PASS = "allowLogin"
+LOGIN_FAIL = "refuseLogin"
+
 # format the item for sending to its destination.
 # send the host ip and portnum so the desination knows how to send the item back
 def formatmsg(uid, host_ip, host_portnum,item)->str:

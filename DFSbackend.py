@@ -4,7 +4,8 @@ import os
 import shutil
 
 from colors import color_dict
-from messaging import extract_uploadfile
+from messaging import extract_uploadfile, LOGIN_FAIL, LOGIN_PASS
+
 
 HOME_DIR_NAME = '_/'
 DO_NOT_CHANGE_CURRDIR = '~'
@@ -87,8 +88,9 @@ class DFShandler:
             pickle_obj(self.fname, self.graph)
 
         self.parseoptions = {       # 'key': (function, kwargs)
-            'cd': (self.open_dir, ['full_path']),
+            'login': (self.login, ['subject']),
             'home': (self.open_dir, ['home']),
+            'cd': (self.open_dir, ['full_path']),
             'back': (self.open_dir, ['back_dirpath']),
             'get': (self.get_file, ['current_dirpath', 'full_path']),
             'up': (self.upload_file, ['current_dirpath', 'subject']),
@@ -101,11 +103,28 @@ class DFShandler:
             'help': (self.display_help, ['current_dirpath'])
 
         }
+    @parsedcommand
+    def login(self, subject):
+        # subject is password in hashed form
+        login_folderpath = self.folder_path + '/login/'
+        login_filepath = login_folderpath + 'login.txt'
+        if not os.path.isdir(login_folderpath):
+            # initially making account - create folder, initialise with password hash
+            os.mkdir(login_folderpath, 0o777)
+            with open(login_filepath, 'w+') as f_init:
+                f_init.write(subject)
+                return DO_NOT_CHANGE_CURRDIR, LOGIN_PASS
+        else:
+            with open(login_filepath, 'r') as f_compare:
+                if f_compare.readline() == subject:
+                    return DO_NOT_CHANGE_CURRDIR, LOGIN_PASS
+                else:
+                    return DO_NOT_CHANGE_CURRDIR, LOGIN_FAIL
 
     @parsedcommand
     def upload_file(self, dirpath, subject):        # make this async def if needed ?
         #   asynchronously upload all files to server
-        print(f'new file to uplaod from user is {subject} upload into current dir: {dirpath}')
+        # print(f'new file to uplaod from user is {subject} upload into current dir: {dirpath}')
         fname, contents = extract_uploadfile(subject)
 
         curr_parent_files = self.graph[dirpath]
@@ -134,7 +153,7 @@ class DFShandler:
         # retrieve file from servers online and display it in the output box on the terminal
         # TODO : in the future make this output box a textinput field. allow users to edit the files, then type 'save'
         # to return to the backdir and save the new copy of their file
-        print(f"file to get: {file_path}")
+        # print(f"file to get: {file_path}")
         if file_path == '':
             return
         serv_filepath = self.folder_path + file_path.replace("/", "¿")
@@ -161,7 +180,7 @@ class DFShandler:
 
     @parsedcommand
     def open_dir(self, new_dir_path):
-        print(f'new dir to open={new_dir_path}')
+        # print(f'new dir to open={new_dir_path}')
         if new_dir_path == '':
             return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(self.graph[HOME_DIR_NAME])
         if new_dir_path[len(new_dir_path)-1] != '/':
@@ -177,7 +196,7 @@ class DFShandler:
     @parsedcommand
     def add_folder(self, dirpath, folderpath):     # dir path of parent folder
         # add an item to a parent folder
-        print(f"parent folder {dirpath}, new file path = {folderpath}")   # file can also be a f
+        # print(f"parent folder {dirpath}, new file path = {folderpath}")   # file can also be a f
         if folderpath == '~':
             print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
             return dirpath + add_str('fnew', dirpath), "please retry making the folder. e.g. fnew myfolder/" \
@@ -193,7 +212,7 @@ class DFShandler:
     def remove_folder(self, dirpath, folderpath):
         # remove a folder item from a parent folder
         # TODO: improve this so that it can deal with removing all subfolders and their contents
-        print(f"parent folder {dirpath}, folder to remove path = {folderpath}")
+        # print(f"parent folder {dirpath}, folder to remove path = {folderpath}")
         # TODO make this remove all subfolders
         if folderpath == '~':
             print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
@@ -233,7 +252,7 @@ class DFShandler:
     def delete_file(self, dirpath, filepath):
         # remove a folder item from a parent folder
         # TODO: improve this so that it can deal with removing all subfolders and their contents
-        print(f"parent folder {dirpath}, file to remove path = {filepath}")
+        # print(f"parent folder {dirpath}, file to remove path = {filepath}")
         # TODO make this remove all subfolders
         if filepath == '~':
             print(color_dict['cyan'] + "this file could not be deleted" + color_dict['reset'])

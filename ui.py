@@ -71,18 +71,18 @@ AppScreenManager:
                 root.manager.transition.direction = 'up'
                 root.manager.current='main'
         Label:
-            text: 'Enter username:'
+            text: 'Type username and press enter:'
             color: {black}
-            size_hint: 0.29, 0.1
+            size_hint: 0.5, 0.1
             valign: 'center'
             halign: 'left'
             text_size: self.size
             font_size: 19
             pos: {window_width*0.05}, {window_height/2 + 0.2*window_height - 21}
         Label:
-            text: 'Enter password:'
+            text: 'Type password and press enter:'
             color: {black}
-            size_hint: 0.29, 0.1
+            size_hint: 0.5, 0.1
             valign: 'center'
             halign: 'left'
             text_size: self.size
@@ -115,7 +115,6 @@ AppScreenManager:
             multiline: False
             on_text_validate:
                 app.password = self.text
-                app.set_logins()
             
 
 
@@ -252,15 +251,13 @@ class MainScreen(Screen):
         print("entered " + txt)
         if txt == '':
             txt = ' '
-        if txt == 'sv':
+        elif txt == 'sv':
             # user wants to save their current file
             txt = f'sv {self.ids.id_file_input.text}'
         msg_q.put(combine_dirtext(app_curr_dir, txt))  # only forward message if originates from user
         self.out = self.prev_out + '\n' + '>' + txt     # use log_id if plan to show server/client chat
         self.prev_out = self.out
         return txt
-
-
 
     def reselect(self, textinref):
         Clock.schedule_once(partial(self.keep_blinking, textinref), .5)
@@ -274,7 +271,7 @@ class MainScreen(Screen):
 
 
 class AppClass(App):
-    files = StringProperty("enter 'home' to begin")
+    files = StringProperty("enter 'login' to login")
     curr_dir = StringProperty('~')
     global app_curr_dir
     username = StringProperty()
