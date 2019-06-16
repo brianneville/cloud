@@ -1,9 +1,15 @@
 import asyncio
 import _pickle
+import os
+import shutil
+
 from colors import color_dict
+from messaging import extract_uploadfile
 
 HOME_DIR_NAME = '_/'
 DO_NOT_CHANGE_CURRDIR = '~'
+
+back_string = '\n\n use the back command to return to the previous screen'
 
 
 def pickle_obj(fname, graph) ->None:
@@ -49,10 +55,18 @@ def get_backpath(command) ->str:
 def getfiles_frompaths(flist)->str:
     files_str = ''
     for path in flist:
-        path = path[:-1:]  # get the last part of the path
-        path = path[path.rfind('/') + 1:] + '/' + '\n'
+        if path.find('.') < 0:
+            # then we know that the path is a directory
+            path = path[:-1:]  # get the last part of the path
+            path = path[path.rfind('/') + 1:] + '/'
+        path += '\n'
         files_str += path
     return files_str
+
+
+def add_str(base, dir)->str:
+    # allow the user to do the logical thing and enter 'back' to get out of help/popups
+    return base+'/' if dir[-1:] == '/' else '--' + base + '/'
 
 
 class DFShandler:
@@ -64,6 +78,7 @@ class DFShandler:
             HOME_DIR_NAME: []         # home directory : ["path/folder_x", "path/folder_y" "path/file.txt" etc ]
             #                 format=  dir: [list of files and directories at this location]
         }
+        self.folder_path = FOLDER_PATH
         self.fname = FOLDER_PATH + "graph_"+str(uid)
         try:
             self.graph = unpickle_obj(self.fname)
@@ -75,24 +90,37 @@ class DFShandler:
             'cd': (self.open_dir, ['full_path']),
             'home': (self.open_dir, ['home']),
             'back': (self.open_dir, ['back_dirpath']),
-            'get': (self.get_file, ['full_path']),
-            'up': (self.upload_file, ['current_dirpath','subject']),
+            'get': (self.get_file, ['current_dirpath', 'full_path']),
+            'up': (self.upload_file, ['current_dirpath', 'subject']),
+            'sv': (self.save_file, ['current_dirpath', 'subject']),
+            'new': (self.new_file, ['current_dirpath', 'subject']),
+            'del': (self.delete_file, ['current_dirpath', 'subject']),
             'fnew': (self.add_folder, ['current_dirpath', 'full_path']),
             'fdel': (self.remove_folder, ['current_dirpath', 'full_path']),
-            'help': (self.display_help, [])
+            'SELF-DELETE': (self.self_delete, []),
+            'help': (self.display_help, ['current_dirpath'])
+
         }
 
     @parsedcommand
-    def upload_file(self, dirpath, filepath):        # make this async def if needed ?
+    def upload_file(self, dirpath, subject):        # make this async def if needed ?
         #   asynchronously upload all files to server
-        print(f'new file to uplaod from user is {filepath}. upload into current dir: {dirpath}')
-        if filepath == '~':
-            print(color_dict['cyan'] + "this file could not be uploaded" + color_dict['reset'])
-            return DO_NOT_CHANGE_CURRDIR, "please retry uploading the file. e.g. up c:/users/name/folder/file.txt"
+        print(f'new file to uplaod from user is {subject} upload into current dir: {dirpath}')
+        fname, contents = extract_uploadfile(subject)
+
         curr_parent_files = self.graph[dirpath]
-        curr_parent_files.append(filepath)
+        curr_parent_files.append(fname)
+
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)  # save the new directory structure
+
+        # replace so that new subfolders dont have to be created
+        full_name = dirpath.replace("/", "¿") + fname
+        server_fname = self.folder_path + full_name
+        with open(server_fname, 'w+') as fout:
+            for line in contents:
+                fout.write(line)
+
         '''
         fname, client_chunks = self.divide_into_chunks(filepath)
         loop = asyncio.get_event_loop()
@@ -101,11 +129,35 @@ class DFShandler:
         '''
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
 
+    @parsedcommand
+    def get_file(self, dirpath, file_path):     # here filepath is full path
+        # retrieve file from servers online and display it in the output box on the terminal
+        # TODO : in the future make this output box a textinput field. allow users to edit the files, then type 'save'
+        # to return to the backdir and save the new copy of their file
+        print(f"file to get: {file_path}")
+        if file_path == '':
+            return
+        serv_filepath = self.folder_path + file_path.replace("/", "¿")
+        output = ''
+        if os.path.exists(serv_filepath):
+            with open(serv_filepath, 'r') as fin:
+                for line in fin:
+                    output += line
+            return file_path, output
+        return dirpath+add_str('404', dirpath), 'File not found' + back_string
 
     @parsedcommand
-    def get_file(self, file_path):
-        # retrieve file from servers online
-        print(f"file to get: {file_path}")
+    def save_file(self, filepath, subject):
+        # user wants to save the string 'subject' into the file at dirpath.replace("/", "¿")
+        serv_filepath = self.folder_path + filepath.replace("/", "¿")
+        if os.path.exists(serv_filepath):
+            with open(serv_filepath, 'w') as fout:
+                for line in subject:
+                    fout.write(line)
+        else:
+            return filepath+add_str('sv', filepath), 'unable to save, please open a file using the get command' \
+                   + back_string
+        return filepath, subject
 
     @parsedcommand
     def open_dir(self, new_dir_path):
@@ -128,7 +180,8 @@ class DFShandler:
         print(f"parent folder {dirpath}, new file path = {folderpath}")   # file can also be a f
         if folderpath == '~':
             print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
-            return DO_NOT_CHANGE_CURRDIR, "please retry making the folder. e.g. fnew myfolder/"
+            return dirpath + add_str('fnew', dirpath), "please retry making the folder. e.g. fnew myfolder/" \
+                   + back_string
         curr_parent_files = self.graph[dirpath]
         curr_parent_files.append(folderpath)
         self.graph[folderpath] = []
@@ -138,31 +191,92 @@ class DFShandler:
 
     @parsedcommand
     def remove_folder(self, dirpath, folderpath):
-        # remove an item from a parent folder
-        print(f"parent folder {dirpath}, file to remove path = {folderpath}")
+        # remove a folder item from a parent folder
+        # TODO: improve this so that it can deal with removing all subfolders and their contents
+        print(f"parent folder {dirpath}, folder to remove path = {folderpath}")
         # TODO make this remove all subfolders
         if folderpath == '~':
-            print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
-            return DO_NOT_CHANGE_CURRDIR, "please retry deleting the folder. e.g. fdel myfolder/"
+            print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
+            return dirpath + add_str('fdel', dirpath), "please retry deleting the folder. e.g. fdel myfolder/"\
+                   +back_string
         curr_parent_files = self.graph[dirpath]
-        curr_parent_files.remove(folderpath)
+        try:
+            curr_parent_files.remove(folderpath)
+        except ValueError:
+            return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files) + "\n\n Please retry deleting" \
+                " the folder, Ensuring to spell the folder name correctly.\n " \
+                " Note: use the del command to delete files, and fdel to delete folders "\
+                + back_string
         self.graph.pop(folderpath)
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)          # save the new directory structure
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
 
     @parsedcommand
-    def display_help(self):      # returns:  'directory to change current dir to if any' , output
-        return DO_NOT_CHANGE_CURRDIR, """                              
+    def new_file(self, dirpath, subject):
+        # add a new txt file to the parent folder
+        if subject.find('.txt') < 0:
+            subject += '.txt'
+        curr_parent_files = self.graph[dirpath]
+        curr_parent_files.append(subject)
+        self.graph[dirpath] = curr_parent_files
+        pickle_obj(self.fname, self.graph)  # save the new directory structure
+
+        # create a new empty file
+        serv_filepath = self.folder_path + dirpath.replace("/", "¿") + subject
+        with open(serv_filepath, 'w+'):
+            pass
+
+        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
+
+    @parsedcommand
+    def delete_file(self, dirpath, filepath):
+        # remove a folder item from a parent folder
+        # TODO: improve this so that it can deal with removing all subfolders and their contents
+        print(f"parent folder {dirpath}, file to remove path = {filepath}")
+        # TODO make this remove all subfolders
+        if filepath == '~':
+            print(color_dict['cyan'] + "this file could not be deleted" + color_dict['reset'])
+            return dirpath + add_str('del', dirpath), "please retry deleting the file. e.g. del myfile.txt"
+        curr_parent_files = self.graph[dirpath]
+        try:
+            curr_parent_files.remove(filepath)
+        except ValueError:
+            return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files) + "\n\n Please retry deleting" \
+                " the file, Ensuring to spell the filename correctly.\n " \
+                " Note: use the del command to delete files, and fdel to delete folders " \
+                + back_string
+        self.graph[dirpath] = curr_parent_files
+        pickle_obj(self.fname, self.graph)          # save the new directory structure
+        serv_filepath = self.folder_path + filepath.replace("/", "=")
+        os.remove(self.folder_path + serv_filepath)
+        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
+
+    @parsedcommand
+    def self_delete(self):
+        if os.path.exists(self.folder_path):
+            shutil.rmtree(self.folder_path)
+            self.graph.clear()
+        return DO_NOT_CHANGE_CURRDIR, 'account deleted, please make a new one and login to home again'
+
+    @parsedcommand
+    def display_help(self, dirpath):      # returns:  'directory to change current dir to if any' , output#
+        #     msg example: cd subfolder_1
+
+        return dirpath + add_str('help', dirpath), """                              
     _________format guide_________________________
-    msg example: cd subfolder_1     
     home - go back to the _/ directory (home)        
     cd - change directory to a sub directory         
     back - return to the parent directory           
     get - downlaod a file from a directory          
-    up - upload a file from your pc to a folder   
+    up - upload a file from your pc to a folder
+    new - create a new text file 
+    sv - save changes to an open text file
+    del - delete a file   
     fnew - create a new folder                       
     fdel - delete a folder                           
+    SELF-DELETE - irrevesibly delete an account 
+        (all user data will be deleted)    
     
     __examples____________
     home
@@ -170,8 +284,12 @@ class DFShandler:
     back
     get file.txt
     up c:/users/u/file.dat
+    new myfile
+    del myfile.txt
+    sv 
     fnew myfolder
     fdel myfolder
+    SELF-DELETE
         """
 
     def parse(self, msg, current_dirpath) ->(str, str):
@@ -179,7 +297,7 @@ class DFShandler:
         full_path = DO_NOT_CHANGE_CURRDIR
         # full path is the entire path for the file or dir to be used for indexing the graph dict
         space_pos = msg.find(' ')
-        subject = msg[space_pos+1:] if space_pos >= 0 else None     # ex subfolder1
+        subject = msg[space_pos+1:] if space_pos >= 0 else ''     # ex subfolder1
         command = msg[:space_pos] if space_pos >= 0 else msg        # ex cd
         if msg[-1:] == '/' or (subject is not None and subject.find('.') >= 0):
             full_path = current_dirpath + subject
@@ -196,7 +314,7 @@ class DFShandler:
             )
             return output[0], output[1]
         except KeyError:
-            return DO_NOT_CHANGE_CURRDIR, "INVALID ARG [type: 'help' to see commands]"
+            return current_dirpath + add_str('help', current_dirpath), "INVALID ARG [type: 'help' to see commands]"
         # yeah i know this might not be incredibly efficient/perfect? but i just wanted to use decorators
 
 

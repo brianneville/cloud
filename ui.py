@@ -8,7 +8,7 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, BooleanProperty
 from kivy.clock import Clock
 
 from messaging import combine_dirtext
@@ -165,7 +165,7 @@ AppScreenManager:
                 color: 1, 1, 1, 1
                 multiline: False
                 on_text_validate:
-                    root.sent_cmd(self.text, 0)
+                    root.sent_cmd(self.text)
                     self.text =''
                     self.focus = True
                     root.reselect(textin)
@@ -218,7 +218,8 @@ AppScreenManager:
                 Rectangle:
                     pos: self.pos
                     size: self.size
-            Label:
+            TextInput:
+                id:id_file_input
                 color: {black}
                 padding: (10, 5)
                 text: app.files
@@ -226,7 +227,10 @@ AppScreenManager:
                 valign: 'top'
                 halign: 'left' 
                 multiline: True
-
+                disabled: app.disable_input
+                background_disabled_normal: ''
+                disabled_color: ''
+                disabled_foreground_color: {black}
 """
 
 app_curr_dir = ''
@@ -243,15 +247,16 @@ class SettingsScreen(Screen):
 class MainScreen(Screen):
     out = StringProperty('')
     prev_out = out
-    indent = ['>', 's', 'c']
 
-    def sent_cmd(self, txt, log_id):
+    def sent_cmd(self, txt):
         print("entered " + txt)
         if txt == '':
             txt = ' '
-        if not log_id:
-            msg_q.put(combine_dirtext(app_curr_dir, txt))  # only forward message if originates from user
-        self.out = self.prev_out + '\n' + self.indent[log_id] + txt     # use log_id if plan to show server/client chat
+        if txt == 'sv':
+            # user wants to save their current file
+            txt = f'sv {self.ids.id_file_input.text}'
+        msg_q.put(combine_dirtext(app_curr_dir, txt))  # only forward message if originates from user
+        self.out = self.prev_out + '\n' + '>' + txt     # use log_id if plan to show server/client chat
         self.prev_out = self.out
         return txt
 
@@ -274,15 +279,24 @@ class AppClass(App):
     global app_curr_dir
     username = StringProperty()
     password = StringProperty()
+    disable_input = BooleanProperty()
 
     def build(self):
         global app_curr_dir
         app_curr_dir = self.curr_dir
+        self.set_disable_input(True)    # on startup, editing is disabled
         self.title = 'DFS'
         return Builder.load_string(gui)
 
     def update_files(self, new):
         self.files = new
+
+    def get_disable_input(self):
+        return self.disable_input
+
+    def set_disable_input(self, newval):
+        # turn on or off textinput
+        self.disable_input = newval
 
     def update_curr_dir(self, new_dir):
         global app_curr_dir

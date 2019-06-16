@@ -1,4 +1,4 @@
-
+import os
 
 # format the item for sending to its destination.
 # send the host ip and portnum so the desination knows how to send the item back
@@ -58,3 +58,28 @@ def getchangedir_op(text) ->(str, str):
     chngdir = text[dir_start+len(dir_str):text_start]
     op = text[text_start+len(text_str):]
     return chngdir, op
+
+
+def parse_uploadfile(cmd)->str:
+    # used for appending a file to an 'up' command  # note, right now this only works with txt files.
+    # TODO: some way to be able to use socket.write() to write a bytestream of any file - not using strings
+    fpath = cmd[len('up '):]
+    fname = cmd[cmd.rfind('/')+1:]
+    outstring = f'up !name:{fname}!file:'
+    if os.path.exists(fpath):
+        with open(fpath, 'r', encoding="utf8") as fin:
+            for line in fin:
+                outstring += line
+        return outstring
+    return cmd
+
+
+def extract_uploadfile(subject) ->(str, str):
+    name_str, file_str = '!name:', '!file:'
+    name_start = subject.find(name_str)
+    file_start = subject.find(file_str)
+
+    fname = subject[name_start+len(name_str):file_start]
+    filecontents = subject[file_start+len(file_str):]
+    return fname, filecontents
+

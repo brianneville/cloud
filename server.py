@@ -9,7 +9,7 @@ class ServerClass(threading.Thread):
     async def handle_echo(self, reader, writer):
         # this function called when starting the server will recieve a pair of arguments
         # of type StreamReader and StreamWriter
-        data = await reader.read(1000)   # read up to 100 bytes
+        data = await reader.read()   # read up to 1000 bytes    # currently reading up to EOF
         message = data.decode()         # decode byte object
 
         # addr = writer.get_extra_info('peername')

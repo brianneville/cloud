@@ -40,7 +40,7 @@ def processing(item):
     # if it specifies a dest_ip that is different from the clients own IP, then send it,
     # if it specifies a dest_ip that is the same as the clients own IP,then this is a msg that we had wanted to recieve
     global app_instance, user
-    USER_UID = 101
+    USER_UID = 101      # TODO: get this value from the user entering it through app_instance
     if item is not ' ':
         if item.find('IP:') >= 0 and item.find('PORT:') >= 0 and item.find('MSG:') >= 0:
             # recieving items from remote
@@ -49,6 +49,12 @@ def processing(item):
             app_instance.update_files(f'{output}')
             if change_dir is not DO_NOT_CHANGE_CURRDIR:
                 app_instance.update_curr_dir(change_dir)
+
+            if not app_instance.get_disable_input():    # default to not allowing textinput
+                app_instance.set_disable_input(True)
+            if change_dir[-4:] == '.txt':
+                app_instance.set_disable_input(False)
+
         elif item == CLOSE_STRING:
             # shut off user server when closing. if this is not here, then the CLOSE_STRING will be sent to remote,
             # and remote will shutdown when user closes their ui terminal
@@ -58,6 +64,16 @@ def processing(item):
 
         else:
             # user entered something, format this item, and send to remote
+            # check if the user is trying to upload a file
+            cdir, text = split_dirtext(item)
+            up_pos = text.find('up ')
+            if not up_pos:
+                new_cmd = parse_uploadfile(text)
+                if new_cmd == text:
+                    # then the file has not been found
+                    app_instance.update_files(app_instance.files + '\n\n file not found on client PC')
+                    return
+                item = combine_dirtext(cdir, new_cmd)
             send(user.DEST_IP, user.REMOTE_PORTNUM,
                  formatmsg(uid=USER_UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
                  recieve=False)
