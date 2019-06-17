@@ -5,6 +5,7 @@ import kivy
 import wx
 from functools import partial
 from kivy.core.window import Window
+from kivy.config import Config
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -28,7 +29,9 @@ app = wx.App(False)
 wxwidth, wxheight = wx.GetDisplaySize()
 window_width, window_height = 700 / 1920 * wxwidth, 700 / 1080 * wxheight
 Window.size = (window_width, window_height)
-Window.borderless = True
+# Window.borderless = True
+Config.set('graphics', 'resizable', False)
+Config.write()
 Window.clearcolor = white  # stops black flicker on transition
 
 msg_q = None
@@ -134,8 +137,7 @@ AppScreenManager:
             background_normal: ''
             size_hint: 0.05, 0.05
             pos: {window_width - 0.05* window_width}, {window_height - window_height*0.05}
-            on_release:
-                app.exit()
+            
         Button:
             text: 'login'
             color: {black}
@@ -312,7 +314,7 @@ class AppClass(App):
         # TODO: make it so that this saves the username and password into a file where they can be read by the
         # dfsbackend and by the user to stay signed in when reopening the app. have textinputs display username/password
         # values on startup of terminal UI
-
+        # ^^ not going to do this, introduces security issues
 
 def start():
     app_instance = AppClass()

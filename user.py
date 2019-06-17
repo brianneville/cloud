@@ -104,7 +104,7 @@ class ClientHandler(threading.Thread):
 
     def __init__(self, ip, port_num, q, cond, processing_func):
         super(ClientHandler, self).__init__()
-        self.DEST_IP = ip               # TODO: this will have to be removed. dest_ip and port num will be
+        self.DEST_IP = ip               # TODO: this will have to be removed?. dest_ip and port num will be
         self.DEST_PORT = port_num       # found by reading the messages from the queue: Format is "DEST_IP PORT_NUM msg"
         self.q = q      # this queue will have messages
         self.cond = cond
@@ -172,6 +172,7 @@ def main():
     app_instance.run()
 
     print("exiting sys")
+    app_instance.exit()
     sys.exit()
 
 

@@ -70,21 +70,24 @@ def add_str(base, dir)->str:
     return base+'/' if dir[-1:] == '/' else '--' + base + '/'
 
 
-def remove_chilren(UID_folder_path, curr_values_list, graph, previous_dir, parent_dir):
-    for val in curr_values_list:
-        if val in graph:
-            # value has key in graph, therefore it is folder. remove its children
-            remove_chilren(UID_folder_path, graph[val], graph, previous_dir= previous_dir+val, parent_dir=parent_dir)
-            graph.pop(val)
-        else:
+def removechildren(graph, curr_vals_list, popdirs, folderpath, uidfolderpath):
+    for v in curr_vals_list:
+        if v in graph:
+            # print(color_dict['cyan'] + f'v is {v}' + color_dict['reset'])
+            # then v is the path of a subfolder. remove its subfolders
+            removechildren(graph, graph[v], popdirs, v, uidfolderpath)
+            if popdirs:
+                print(f'popping the graph entry at {v}')
+                graph.pop(v)
+        elif not popdirs:
+            # print(f"removing the file {v} from dir: {folderpath}. "
+                # f"removing: {uidfolderpath + folderpath.replace('/', '¿') + v}")
+
             # value has no key in graph. therefore it is file. remove and delete
-            if previous_dir == '':
-                previous_dir = parent_dir
-            curr_values_list.remove(val)
-            filepath = previous_dir.replace('/', '¿') + val
-            print(color_dict['cyan']+f"uidfolder = {UID_folder_path}, filepath = {filepath}, currval list =" +
-                                     f" {curr_values_list} + parent_dir = {previous_dir}" + color_dict['reset'])
-            os.remove(UID_folder_path + filepath)
+            filepath = uidfolderpath + folderpath.replace('/', '¿') + v
+            # print(color_dict['cyan']+f'removing filepath {filepath}' + color_dict['reset'])
+            os.remove(filepath)
+
 
 class DFShandler:
 
@@ -167,9 +170,6 @@ class DFShandler:
     @parsedcommand
     def get_file(self, dirpath, file_path):     # here filepath is full path
         # retrieve file from servers online and display it in the output box on the terminal
-        # TODO : in the future make this output box a textinput field. allow users to edit the files, then type 'save'
-        # to return to the backdir and save the new copy of their file
-        # print(f"file to get: {file_path}")
         if file_path == '':
             return
         serv_filepath = self.folder_path + file_path.replace("/", "¿")
@@ -225,29 +225,6 @@ class DFShandler:
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
 
     @parsedcommand
-    def old_remove_folder(self, dirpath, folderpath):
-        # remove a folder item from a parent folder
-        # TODO: improve this so that it can deal with removing all subfolders and their contents
-        # print(f"parent folder {dirpath}, folder to remove path = {folderpath}")
-        # TODO make this remove all subfolders
-        if folderpath == '~':
-            print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
-            return dirpath + add_str('fdel', dirpath), "please retry deleting the folder. e.g. fdel myfolder/"\
-                   +back_string
-        curr_parent_files = self.graph[dirpath]
-        try:
-            curr_parent_files.remove(folderpath)
-        except ValueError:
-            return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files) + "\n\n Please retry deleting" \
-                " the folder, Ensuring to spell the folder name correctly.\n " \
-                " Note: use the del command to delete files, and fdel to delete folders "\
-                + back_string
-        self.graph.pop(folderpath)
-        self.graph[dirpath] = curr_parent_files
-        pickle_obj(self.fname, self.graph)          # save the new directory structure
-        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
-
-    @parsedcommand
     def remove_folder(self, dirpath, folderpath):
         if folderpath == '~':
             print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
@@ -255,19 +232,19 @@ class DFShandler:
                    +back_string
         curr_parent_files = self.graph[dirpath]
         if folderpath not in curr_parent_files:
-            return DO_NOT_CHANGE_CURRDIR, \
-                   getfiles_frompaths(curr_parent_files) + "\n\n Please retry deleting" \
-                    " the folder, Ensuring to spell the folder name correctly.\n " \
-                    " Note: use the del command to delete files, and fdel to delete folders " \
+            return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files) + "\n\n Please retry deleting" \
+                                         " the folder, Ensuring to spell the folder name correctly.\n " \
+                                         " Note: use the del command to delete files, and fdel to delete folders " \
                     + back_string
 
-        # recursively remove all children of that folderpath
-        remove_chilren(self.folder_path, self.graph[folderpath], self.graph, previous_dir='', parent_dir=folderpath)
+        removechildren(self.graph, self.graph[folderpath], False, folderpath, self.folder_path) # delete the files
+        removechildren(self.graph, self.graph[folderpath], True, folderpath, self.folder_path) # pop the folders
 
         curr_parent_files.remove(folderpath)
         self.graph.pop(folderpath)
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)          # save the new directory structure
+
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
 
     @parsedcommand
@@ -289,10 +266,6 @@ class DFShandler:
 
     @parsedcommand
     def delete_file(self, dirpath, filepath):
-        # remove a folder item from a parent folder
-        # TODO: improve this so that it can deal with removing all subfolders and their contents
-        # print(f"parent folder {dirpath}, file to remove path = {filepath}")
-        # TODO make this remove all subfolders
         if filepath == '~':
             print(color_dict['cyan'] + "this file could not be deleted" + color_dict['reset'])
             return dirpath + add_str('del', dirpath), "please retry deleting the file. e.g. del myfile.txt"

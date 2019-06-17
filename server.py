@@ -12,19 +12,14 @@ class ServerClass(threading.Thread):
         data = await reader.read()   # read up to 1000 bytes    # currently reading up to EOF
         message = data.decode()         # decode byte object
 
-        # addr = writer.get_extra_info('peername')
-        # print(f"client message is: {message}\n client address is: {addr}")
         if self.msq_q is not None:      # for the seperate servers , we need to pass the message back to the client to
             #                             process
             # (color_dict['blue'] + "server is putting message in queue for client to deal with" +
             #      color_dict['reset'])
             self.msq_q.put(message)
-        # response = 'echo: ' + message
-        # print(f"Server echoeing: {response}")  # echo the message back
-        # writer.write(response.encode())          # immediately send the original data back
         await writer.drain()        # block if the send buffer is reached its maximum, until the other side has recieved
         # and the buffer is no full
-
+        # ^not needed, no writing is done
         writer.close()
         if message[message.find('MSG:')+len('MSG:'):] == self.CLOSE_STRING:
             print("server setting future")
