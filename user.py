@@ -82,6 +82,7 @@ def processing(item):
                     send(user.DEST_IP, user.REMOTE_PORTNUM,
                          formatmsg(uid=user.UID, host_ip=user.HOST_IP, host_portnum=user.SERVER_PORTNUM, item=item),
                          recieve=False)
+                    return
                 else:
                     print('unathorised')
                     return

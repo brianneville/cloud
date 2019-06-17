@@ -70,6 +70,22 @@ def add_str(base, dir)->str:
     return base+'/' if dir[-1:] == '/' else '--' + base + '/'
 
 
+def remove_chilren(UID_folder_path, curr_values_list, graph, previous_dir, parent_dir):
+    for val in curr_values_list:
+        if val in graph:
+            # value has key in graph, therefore it is folder. remove its children
+            remove_chilren(UID_folder_path, graph[val], graph, previous_dir= previous_dir+val, parent_dir=parent_dir)
+            graph.pop(val)
+        else:
+            # value has no key in graph. therefore it is file. remove and delete
+            if previous_dir == '':
+                previous_dir = parent_dir
+            curr_values_list.remove(val)
+            filepath = previous_dir.replace('/', '¿') + val
+            print(color_dict['cyan']+f"uidfolder = {UID_folder_path}, filepath = {filepath}, currval list =" +
+                                     f" {curr_values_list} + parent_dir = {previous_dir}" + color_dict['reset'])
+            os.remove(UID_folder_path + filepath)
+
 class DFShandler:
 
     def __init__(self, uid, FOLDER_PATH):
@@ -209,7 +225,7 @@ class DFShandler:
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
 
     @parsedcommand
-    def remove_folder(self, dirpath, folderpath):
+    def old_remove_folder(self, dirpath, folderpath):
         # remove a folder item from a parent folder
         # TODO: improve this so that it can deal with removing all subfolders and their contents
         # print(f"parent folder {dirpath}, folder to remove path = {folderpath}")
@@ -226,6 +242,29 @@ class DFShandler:
                 " the folder, Ensuring to spell the folder name correctly.\n " \
                 " Note: use the del command to delete files, and fdel to delete folders "\
                 + back_string
+        self.graph.pop(folderpath)
+        self.graph[dirpath] = curr_parent_files
+        pickle_obj(self.fname, self.graph)          # save the new directory structure
+        return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
+
+    @parsedcommand
+    def remove_folder(self, dirpath, folderpath):
+        if folderpath == '~':
+            print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
+            return dirpath + add_str('fdel', dirpath), "please retry deleting the folder. e.g. fdel myfolder/"\
+                   +back_string
+        curr_parent_files = self.graph[dirpath]
+        if folderpath not in curr_parent_files:
+            return DO_NOT_CHANGE_CURRDIR, \
+                   getfiles_frompaths(curr_parent_files) + "\n\n Please retry deleting" \
+                    " the folder, Ensuring to spell the folder name correctly.\n " \
+                    " Note: use the del command to delete files, and fdel to delete folders " \
+                    + back_string
+
+        # recursively remove all children of that folderpath
+        remove_chilren(self.folder_path, self.graph[folderpath], self.graph, previous_dir='', parent_dir=folderpath)
+
+        curr_parent_files.remove(folderpath)
         self.graph.pop(folderpath)
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)          # save the new directory structure
@@ -267,7 +306,7 @@ class DFShandler:
                 + back_string
         self.graph[dirpath] = curr_parent_files
         pickle_obj(self.fname, self.graph)          # save the new directory structure
-        serv_filepath = self.folder_path + filepath.replace("/", "=")
+        serv_filepath = (dirpath+ filepath).replace("/", "¿")
         os.remove(self.folder_path + serv_filepath)
         return DO_NOT_CHANGE_CURRDIR, getfiles_frompaths(curr_parent_files)
 
