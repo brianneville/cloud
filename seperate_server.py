@@ -10,7 +10,7 @@ from DFSbackend import DFShandler
 
 def serv_processing(item):
     global seperate_server, FOLDER_PATH, dfs_handler
-    print(color_dict['red'] + f"server processing item : {item}" + color_dict['reset'])
+    # print(color_dict['red'] + f"server processing item : {item}" + color_dict['reset'])
     user_uid, user_ip, user_port, msg = extract(item)   # get the uid, ip, port, msg of the user who sent the message
 
     if msg == CLOSE_STRING:  # this will only matter if we want the user to be able to close the remote

@@ -241,7 +241,7 @@ class MainScreen(Screen):
     prev_out = out
 
     def sent_cmd(self, txt):
-        print("entered " + txt)
+        # print("entered " + txt)
         if txt == '':
             txt = ' '
         elif txt == 'sv':
@@ -294,7 +294,7 @@ class AppClass(App):
         app_curr_dir = new_dir
 
     def exit(self):
-        print("putting into q")
+        # print("putting into q")
         msg_q.put('close')
         print("closing app")
         time.sleep(0.5)         # TODO: is this sleep needed - probably not? remove it?

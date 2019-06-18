@@ -32,7 +32,7 @@ async def tcp_echo_client(send_msg, event_loop) ->None:
     reader, writer = await asyncio.open_connection('127.0.0.1', 40400, loop=event_loop)
     writer.write(send_msg.encode())
     data = await reader.read(100)
-    print("data= " + data.decode())
+    # print("data= " + data.decode())
     writer.close()
 
 
@@ -77,7 +77,7 @@ def removechildren(graph, curr_vals_list, popdirs, folderpath, uidfolderpath):
             # then v is the path of a subfolder. remove its subfolders
             removechildren(graph, graph[v], popdirs, v, uidfolderpath)
             if popdirs:
-                print(f'popping the graph entry at {v}')
+                # print(f'popping the graph entry at {v}')
                 graph.pop(v)
         elif not popdirs:
             # print(f"removing the file {v} from dir: {folderpath}. "
@@ -214,7 +214,7 @@ class DFShandler:
         # add an item to a parent folder
         # print(f"parent folder {dirpath}, new file path = {folderpath}")   # file can also be a f
         if folderpath == '~':
-            print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
+            # print(color_dict['cyan'] + "this folder could not be created" + color_dict['reset'])
             return dirpath + add_str('fnew', dirpath), "please retry making the folder. e.g. fnew myfolder/" \
                    + back_string
         curr_parent_files = self.graph[dirpath]
@@ -227,7 +227,7 @@ class DFShandler:
     @parsedcommand
     def remove_folder(self, dirpath, folderpath):
         if folderpath == '~':
-            print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
+            # print(color_dict['cyan'] + "this folder could not be deleted" + color_dict['reset'])
             return dirpath + add_str('fdel', dirpath), "please retry deleting the folder. e.g. fdel myfolder/"\
                    +back_string
         curr_parent_files = self.graph[dirpath]
@@ -267,7 +267,7 @@ class DFShandler:
     @parsedcommand
     def delete_file(self, dirpath, filepath):
         if filepath == '~':
-            print(color_dict['cyan'] + "this file could not be deleted" + color_dict['reset'])
+            # print(color_dict['cyan'] + "this file could not be deleted" + color_dict['reset'])
             return dirpath + add_str('del', dirpath), "please retry deleting the file. e.g. del myfile.txt"
         curr_parent_files = self.graph[dirpath]
         try:

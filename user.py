@@ -23,10 +23,10 @@ def send(DEST_IP, DEST_PORT, message, recieve) ->str:
         message = message.encode()
         s.sendall(message)
         recv_data = None
-        print(color_dict['blue']+ f"client sent: {message}" + color_dict['reset'])
+        # print(color_dict['blue']+ f"client sent: {message}" + color_dict['reset'])
         if recieve:
             data = s.recv(1024)
-            print(color_dict['blue'] + f"client recv: {data}" + color_dict['reset'])
+            # print(color_dict['blue'] + f"client recv: {data}" + color_dict['reset'])
             recv_data = data.decode()
         s.shutdown(socket.SHUT_RDWR)
         s.close()
@@ -83,7 +83,7 @@ def processing(item):
                          recieve=False)
                     return
                 else:
-                    print('unathorised')
+                    # print('unathorised')
                     return
             cdir, text = split_dirtext(item)
             up_pos = text.find('up ')
@@ -113,7 +113,7 @@ class ClientHandler(threading.Thread):
         # continue now that server has been set up
         # consume arguments from queue
         while True:
-            print("getting from queue")
+            # print("getting from queue")
             self.cond.acquire()     # lock mutex
             while True:
                 item = self.q.get()
@@ -123,7 +123,7 @@ class ClientHandler(threading.Thread):
                 # #TODO: this somehow gets signalled from somewhere?
             self.cond.release()     # release mutex
             # process message from queue
-            print(f"processing message: {item}")
+            # print(f"processing message: {item}")
             self.processing_func(item)
 
 

@@ -50,7 +50,7 @@ def split_dirtext(msg) ->(str, str):
 
 # these functions are used to return the new dir and output for the users terminal to display
 def format_diroutput(dir_to_change, output) -> str:
-    print("dir change, op = ",dir_to_change, output)
+    # print("dir change, op = ",dir_to_change, output)
     return "!dircng:" + dir_to_change + "!Outp:" + output
 
 
