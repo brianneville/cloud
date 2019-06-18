@@ -1,0 +1,13 @@
+
+# use this command to generate the spec file?. do not edit the spec file.
+pyinstaller --onefile user.spec
+
+
+# ^ this might be needed  if building from a spec file? but in general only the following command is needed:
+# note: pip install all dependancies for kivy, pygame and restart pycharm
+# use this command to generate an exe in a dist file
+pyinstaller --clean --windowed --noconsole --onefile user.py
+# and
+pyinstaller --clean --onefile seperate_server.py     # to show terminal
+pyinstaller --clean --windowed --noconsole --onefile seperate_server.py     # to not show terminal
+

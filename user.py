@@ -40,7 +40,6 @@ def processing(item):
     # if it specifies a dest_ip that is different from the clients own IP, then send it,
     # if it specifies a dest_ip that is the same as the clients own IP,then this is a msg that we had wanted to recieve
     global app_instance, user
-    # USER_UID = 101      # TODO: get this value from the user entering it through app_instance
     if item is not ' ':
         if item.find('IP:') >= 0 and item.find('PORT:') >= 0 and item.find('MSG:') >= 0:
             # recieving items from remote

@@ -15,6 +15,12 @@ from kivy.clock import Clock
 from messaging import combine_dirtext
 kivy.require('1.10.1')
 
+import os
+def resourcepath():
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS)
+    return os.path.join(os.path.abspath("."))
+kivy.resources.resource_add_path(resourcepath())
 
 exit_red = 0.85, 0.15, 0.2, 1
 button_col = 0.7, 0.8, 0.8, 1
@@ -53,22 +59,14 @@ AppScreenManager:
         Rectangle:
             pos: self.pos
             size: self.size
+    
     RelativeLayout:
-        Button:
-            text: 'x'
-            color: {black}
-            background_color: {exit_red}
-            background_normal: ''
-            size_hint: 0.05, 0.05
-            pos: {window_width - 0.05* window_width}, {window_height - window_height*0.05}
-            on_release:
-                app.exit()
         Button:
             text: 'main'
             color: {black}
             background_color: {green}
             background_normal: ''
-            size_hint: 0.1, 0.05
+            size_hint: 0.15, 0.05
             pos: {window_width - 0.15* window_width}, {window_height - window_height*0.05}
             on_release:
                 root.manager.transition.direction = 'up'
@@ -129,21 +127,14 @@ AppScreenManager:
         Rectangle:
             pos: self.pos
             size: self.size
-    RelativeLayout:
-        Button:
-            text: 'x'
-            color: {black}
-            background_color: {exit_red}
-            background_normal: ''
-            size_hint: 0.05, 0.05
-            pos: {window_width - 0.05* window_width}, {window_height - window_height*0.05}
             
+    RelativeLayout:            
         Button:
             text: 'login'
             color: {black}
             background_color: {green}
             background_normal: ''
-            size_hint: 0.1, 0.05
+            size_hint: 0.15, 0.05
             pos: {window_width - 0.15* window_width}, {window_height - window_height*0.05}
             on_release:
                 root.manager.transition.direction = 'down'
