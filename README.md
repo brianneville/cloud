@@ -7,7 +7,8 @@ The seperate (remote) server can be started using the seperate_server .py file o
 For demonstration/testing purposes, the user and seperate server have been set up to work on localhost.
 
 Users can log in to their accounts or create new ones by entering a username and password.
-The cloud system supports the following commands: 
+The cloud system supports the following commands: #
+
     home - go back to the _/ directory (home)        
     cd - change directory to a sub directory         
     back - return to the parent directory           
