@@ -408,44 +408,5 @@ def divide_into_chunks(self, filepath) ->(str, list):
 async def send_chunks(self, fname, client_chunks):
     pass
 '''
-
-
-# TODO: things to do for distributed file system:
-# 1. generate secure private key to encyrpt user data
-#       - generate public
-# 2. chunk = key XOR data_segment   - this is used to encrypt the data so that it can be distributed safely
-#       make segment size =  65535 - 20 bytes = 65515 bytes (max payload of ipv4 header)
-# 3. track which users/servers are going to be sent the chunk
-#       - keep a dictionary of {chunk_id, [(uid_1002), (uid_2321), (uid_78) ... (uid_34) ]}
-#       - keep another dictionary mapping each of these uid numbers to IP and PORT numbers
-#       - first try downloaded from uid_1002; if no connection to user, then the user offline; retry with uid_2332, etc
-
-
-
-
-
-
-# TODO: things to do for torrenting and distributed filesystem?:
-# goal: make a distributed file system where files are torrented between users
-# 1. generate secure private key to encyrpt user data
-#       - generate public
-# 2. chunk = key XOR data_segment   - this is used to encrypt the data so that it can be distributed safely
-#       make segment size =  65535 - 20 bytes = 65515 bytes (max payload of ipv4 header)
-# 3. track which users are going to be sent the chunk
-#       - keep a dictionary of {chunk_id, [(uid_1002), (uid_2321), (uid_78) ... (uid_34) ]}
-#       - keep another dictionary mapping each of these uid numbers to IP and PORT numbers
-#       - first try downloaded from uid_1002; if no connection to user, then the user offline; retry with uid_2332, etc
-# 4. goal would be to send each chunk to p users:
-#       where p is the probability that any user will be online at any time
-# 5. to download file again:
-#       - go through virtual file system to locate the file you want to open
-#           - parse input from ui to distinguish between opening files and traversing directories
-#       - this can be done by traversing a linked list?
-#       - select a file to open
-#       - go through dictionaries to find the IP addresses and port numbers and request chunks
-#
-# how to handle churn:
-# send out the files to groups of users. (pods). when a pod is assigned, a twin-pod is also created
-# when a member of the pod is closing the application, it should notify the other members of its pod.
-# upon notification, the
-
+# yes i know this is a confusing/irrelevant for a classname
+# ( i was orininally planning on making this system fully distributed, hence the name)
